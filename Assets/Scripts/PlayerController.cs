@@ -5,6 +5,11 @@ using UnityEngine.SceneManagement;
 
 public class PlayerController : MonoBehaviour
 {
+    public GameObject Projectile;
+    public Vector2 projectileVelocity;
+    public Vector2 projectileOffset;
+    public float cooldown = 0.5f;
+    bool isCanShoot = true;
 
     bool isJump = true;
     bool isDead = false;
@@ -12,9 +17,10 @@ public class PlayerController : MonoBehaviour
     Animator anim;
 
     // Use this for initialization
-    void Start()
+    private void Start()
     {
         anim = GetComponent<Animator>();
+        isCanShoot = false;
     }
 
     // Update is called once per frame
@@ -41,9 +47,51 @@ public class PlayerController : MonoBehaviour
         {
             Idle();
         }
+        if (Input.GetKeyDown(KeyCode.Z))
+        {
+            Fire();
+        }
         Move();
         Dead();
     }
+    void Fire()
+    {
+        if (isCanShoot)
+        {
+            GameObject bullet = Instantiate(Projectile, (Vector2)transform.position - projectileOffset * transform.localScale.x, 
+                Quaternion.identity);
+
+            Vector2 velocity = new Vector2(projectileVelocity.x * transform.localScale.x, projectileVelocity.y);
+            bullet.GetComponent<Rigidbody2D>().velocity = velocity * -1;
+
+            Vector3 scale = transform.localScale;
+            bullet.transform.localScale = scale * -1;
+
+            StartCoroutine(CanShoot());
+            anim.SetTrigger("shoot");
+        }
+    }
+
+    IEnumerator CanShoot()
+    {
+        anim.SetTrigger("shoot");
+        isCanShoot = false;
+        yield return new WaitForSeconds(cooldown);
+        isCanShoot = true;
+    }
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (collision.transform.tag.Equals("Peluru"))
+        {
+            isCanShoot = true;
+        }
+        if (collision.transform.tag.Equals("Enemy"))
+        {
+            //SceneManager.LoadScene("Game Over");
+            isDead = true;
+        }
+    }
+
     private void OnCollisionStay2D(Collision2D collision)
     {
         // Kondisi ketika menyentuh tanah
@@ -107,7 +155,7 @@ public class PlayerController : MonoBehaviour
     {
         if (collision.transform.tag.Equals("Coin"))
         {
-            //Data.score += 15;
+            Data.score += 15;
             Destroy(collision.gameObject);
         }
     }
